@@ -80,7 +80,7 @@
 
 - Mỗi dòng chứa thông tin một profile theo cấu trúc:
   ```plaintext
-  [tên_profile]|[mật_khẩu_ví_meta]|[địa_chỉ_ví_nhận_1]
+  [tên_profile]|[mật_khẩu_ví_meta]
   ```
 - Ví dụ:
   ```plaintext
