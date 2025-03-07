@@ -173,20 +173,6 @@ class Node:
         Utility.logger(profile_name=self.profile_name,
                        message=message, show_log=show_log)
 
-    def stop(self, message: str = 'Dừng thực thi.'):
-        '''
-        Phương thức dừng thực thi và quăng lỗi ra ngoài.
-
-        Args:
-            message (str, option): Thông điệp mô tả lý do dừng thực thi. Mặc định là 'Dừng thực thi.'. Nên gồm tên function chứa nó.
-
-        Mô tả:
-            Phương thức này sẽ ghi lại thông điệp dừng thực thi qua log, sau đó quăng ra một lỗi `ValueError` với thông điệp tương ứng.
-            Khi được gọi, phương thức sẽ ngừng các hành động tiếp theo trong chương trình.
-        '''
-        self.log(message)
-        raise ValueError(f'{message}')
-
     def snapshot(self, message: str = 'Mô tả lý do snapshot', stop: bool = True):
         '''
         Ghi lại trạng thái trình duyệt bằng hình ảnh và dừng thực thi chương trình.
@@ -733,7 +719,36 @@ class Node:
 
         self.log(f"❌ Không tìm thấy tab có {type}: {value}.")
         return False
+    
+    def scroll_to(self, element: WebElement, wait: int = None):
+        '''
+        Phương thức cuộn đến phần tử cụ thể được chỉ định.
 
+        Args:
+            element (WebElement, optional): Nếu có, tìm phần tử con bên trong phần tử này.
+            wait (int, optional): Thời gian chờ trước khi điều hướng, mặc định là giá trị của `self.wait = 5`.
+
+        Returns:
+            bool: True, cuộn thành công. False khi gặp lỗi
+            
+        Mô tả:
+            Phương thức sẽ nhận vào 1 element cụ thể, sau đó dùng driver.execute_script() để thực thi script
+        '''
+        timeout = timeout if timeout else self.timeout
+        Utility.wait_time(wait)
+        
+        try:
+            self.driver.execute_script("arguments[0].scrollIntoView();", element)
+            self.log(f'Cuộn thành công')
+            return True
+        
+        except NoSuchWindowException:
+            self.log(f'Không thể cuộn. Cửa sổ đã đóng')
+        except Exception as e:
+            self.log(f'Lỗi - không xác định khi cuộn: {e}')
+            
+        return False
+    
     def check_window_handles(self):
         Utility.wait_time(5, True)
         original_handle = self._driver.current_window_handle
@@ -886,27 +901,26 @@ class BrowserManager:                                                           
     
         chrome_options.add_argument(
             f'--user-data-dir={self.user_data_dir}/{profile_name}')
-        # chrome_options.add_argument(f'--profile-directory={profile_name}') # tắt để sử dụng profile defailt trong profile_name
+        # chrome_options.add_argument(f'--profile-directory={profile_name}') # tắt để sử dụng profile default trong profile_name
         # để có thể đăng nhập google
         chrome_options.add_argument(
             '--disable-blink-features=AutomationControlled')
         chrome_options.add_argument("--log-level=3")
         chrome_options.add_argument("--silent")
         chrome_options.add_argument(f"--force-device-scale-factor={scale}")
-        chrome_options.add_argument(
-            "--disable-features=Translate")  # Vô hiệu hóa translate
+        chrome_options.add_argument("--disable-features=Translate")  # Vô hiệu hóa translate
         # Tắt dòng thông báo auto
         chrome_options.add_experimental_option("useAutomationExtension", False)
         chrome_options.add_experimental_option(
             "excludeSwitches", ["enable-automation"])
-
+        chrome_options.add_argument("--disable-features=InfiniteSessionRestore")  # Ngăn Chrome tự động restore
         # vô hiệu hóa save mật khẩu
         chrome_options.add_experimental_option("prefs", {
             "credentials_enable_service": False
         })  # chỉ dùng được khi dùng profile default (tắt --profile-directory={profile_name})
 
         if self.headless:
-            chrome_options.add_argument("--headless=new") 
+            chrome_options.add_argument("--headless=new") # ẩn UI khi đang chạy
         
         # add extensions
         for ext in self.extensions:
