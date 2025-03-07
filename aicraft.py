@@ -3,6 +3,7 @@ from pathlib import Path
 from browser_automation import BrowserManager
 
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchWindowException
 
 from browser_automation import Node
 from utils import Utility
@@ -17,15 +18,23 @@ class Aicraft:
 
     def click_button_popup(self, selector: str, text: str = ''):
         Utility.wait_time(5)
-        self.node.log(f'Thực hiện execute_script {selector}...')
         try:
             js = f'''
             Array.from(document.querySelectorAll('{selector}')).find(el => el.textContent.trim() === "{text}").click();
             '''
             self.driver.execute_script(js)
+            self.node.log(f'click  ({selector}, {text})')
+            
+            return True
+        except NoSuchWindowException:
+            self.node.log(f'Không thể click ({selector}, {text}). Cửa sổ đã đóng')
         except Exception as e:
-            self.node.log(f'click_button_popup {e}')
+            if 'undefined' in str(e):
+                self.node.log(f'Không tìm thấy ({selector}, {text})')
+            else:
+                self.node.log(f'{e}')
 
+        return False
     def unlock_wallet(self):
         self.node.switch_tab('New Tab', 'title')
         self.driver.get(f'{self.wallet_url}/home.html')
@@ -48,7 +57,61 @@ class Aicraft:
                 return False
 
         return True
+    
+    def connect_wallet(self):
+        xpath = '(//div[button[text()="AI Agent Training"]])//button[3]'
+        text_button = self.node.get_text(By.XPATH, xpath)
+        if text_button == 'Connect wallet':
+            self.node.find_and_click(By.XPATH, xpath)   
 
+            els_shadowroot = [
+                (By.CSS_SELECTOR, "w3m-modal.open"),
+                (By.CSS_SELECTOR, "w3m-router"),
+                (By.CSS_SELECTOR, "w3m-connect-view"),
+                (By.CSS_SELECTOR, "w3m-wallet-login-list"),
+                # (By.CSS_SELECTOR, "w3m-connect-announced-widget"),
+                (By.CSS_SELECTOR, 'w3m-connector-list'),
+                (By.CSS_SELECTOR, 'w3m-connect-injected-widget'),
+                (By.CSS_SELECTOR, '[name="MetaMask"]')
+            ]
+            
+            #document.querySelector('w3m-modal.open').shadowRoot.querySelector('w3m-router').shadowRoot.querySelector('w3m-connect-view').shadowRoot.querySelector('w3m-wallet-login-list').shadowRoot.querySelector('w3m-connector-list').shadowRoot.querySelector('w3m-connect-injected-widget').shadowRoot.querySelector('[name="MetaMask"]').click()
+            meta_wallet = self.node.find_in_shadow(els_shadowroot)
+            if not meta_wallet:
+                return False
+            meta_wallet.click()
+
+            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+                return False
+            if not self.click_button_popup('button', 'Connect'):
+                return False
+            self.click_button_popup('button', 'Approve')
+
+            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+                return False
+            if not self.click_button_popup('button', 'Confirm'):
+                return False
+            
+        elif text_button == "Connecting...":
+            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+                return False
+            if not self.click_button_popup('button', 'Confirm'):
+                return False
+            text_button = self.node.get_text(By.XPATH, xpath)
+            if text_button == 'Switch network':
+                if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+                    return False
+                if not self.click_button_popup('button', 'Approve'):
+                    return False
+        elif "0x" in text_button:
+            self.node.log("Đã connect wallet")
+            return True
+        else:
+            return False
+        
+        self.node.log("Connect wallet thành công")
+        return True
+    
     def vote(self):
         if not self.node.find_and_click(By.XPATH,
              '(//div[div[div[div[h2[text()="Phở"]]]]])//div[2]//button[text()="Vote for me"]'):
@@ -78,10 +141,11 @@ class Aicraft:
             self.node.snapshot(f'unlock_wallet Thất bại')
 
         self.node.go_to('https://aicraft.fun/projects/fizen')
-        scroll = self.node.find(
-            By.XPATH, '(//div[button[text()="Your votes"]])//button[2]')
-        self.driver.execute_script("arguments[0].scrollIntoView();", scroll)
+        # connect wallet
+        if not self.connect_wallet():
+            self.node.snapshot(f'connect_wallet thất bại')
 
+        self.node.switch_tab('https://aicraft.fun/projects/fizen')
         while True:
             times_votes = self.node.get_text(
                 By.XPATH, '(//div[button[text()="Your votes"]])//button[2]')
