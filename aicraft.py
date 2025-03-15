@@ -142,8 +142,13 @@ class Aicraft:
 
         self.node.go_to('https://aicraft.fun/projects/fizen')
         # connect wallet
-        if not self.connect_wallet():
-            self.node.snapshot(f'connect_wallet thất bại')
+        if self.node.find(By.XPATH, '//h2[text()="AICraft needs to connect to your wallet"]'):
+            self.node.find_and_click(By.XPATH, '//button[text()="Sign"]')
+            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+                self.node.snapshot(f'connect_wallet thất bại')
+            self.click_button_popup('button', 'Confirm')
+        # if not self.connect_wallet():
+        #     self.node.snapshot(f'connect_wallet thất bại')
 
         self.node.switch_tab('https://aicraft.fun/projects/fizen')
         while True:
