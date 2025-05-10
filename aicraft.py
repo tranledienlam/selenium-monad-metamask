@@ -14,7 +14,7 @@ class Aicraft:
         self.node = node
         self.profile_name = profile.get('profile_name')
         self.password = profile.get('password')
-        self.wallet_url = None
+        self.wallet_url = 'chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn'
 
     def click_button_popup(self, selector: str, text: str = ''):
         Utility.wait_time(5)
@@ -59,9 +59,9 @@ class Aicraft:
         return True
     
     def connect_wallet(self):
-        xpath = '(//div[button[text()="AI Agent Training"]])//button[3]'
+        xpath = '//div[div[div[button[text()="AI Agent Training"]]]]/div[2]/button'
         text_button = self.node.get_text(By.XPATH, xpath)
-        if text_button == 'Connect wallet':
+        if text_button.lower() == 'Connect Wallet'.lower():
             self.node.find_and_click(By.XPATH, xpath)   
 
             els_shadowroot = [
@@ -80,28 +80,24 @@ class Aicraft:
             if not meta_wallet:
                 return False
             meta_wallet.click()
-
-            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
-                return False
-            if not self.click_button_popup('button', 'Connect'):
-                return False
-            self.click_button_popup('button', 'Approve')
-
-            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
-                return False
-            if not self.click_button_popup('button', 'Confirm'):
+            self.node.switch_tab(self.wallet_url)
+            self.driver.get(f'{self.wallet_url}/popup.html')
+            self.node.find_and_click(By.XPATH,'//button[text()="Connect"]')
+            self.node.find_and_click(By.XPATH, '//button[text()="Approve"]')
+            if not self.node.find_and_click(By.XPATH, '//button[text()="Confirm"]'):
                 return False
             
         elif text_button == "Connecting...":
-            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+            self.node.switch_tab(self.wallet_url)
+            self.driver.get(f'{self.wallet_url}/popup.html')
+            if not self.node.find_and_click(By.XPATH, '//button[text()="Confirm"]'):
                 return False
-            if not self.click_button_popup('button', 'Confirm'):
-                return False
+            self.node.switch_tab('https://aicraft.fun/projects/fizen')
             text_button = self.node.get_text(By.XPATH, xpath)
             if text_button == 'Switch network':
-                if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
-                    return False
-                if not self.click_button_popup('button', 'Approve'):
+                self.node.switch_tab(self.wallet_url)
+                self.driver.get(f'{self.wallet_url}/popup.html')
+                if not self.node.find_and_click(By.XPATH,'//button[text()="Approve"]'):
                     return False
         elif "0x" in text_button:
             self.node.log("Đã connect wallet")
@@ -116,14 +112,15 @@ class Aicraft:
         if not self.node.find_and_click(By.XPATH,
              '(//div[div[div[div[h2[text()="Phở"]]]]])//div[2]//button[text()="Vote for me"]'):
             return False
+        self.node.switch_tab(self.wallet_url)
+        self.driver.get(f'{self.wallet_url}/popup.html')
+        self.node.find_and_click(By.XPATH,'//button[text()="Confirm"]')
         
-        if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
-            return False
-        self.click_button_popup('button', 'Confirm')
-        
-        if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
-            return False
-        self.click_button_popup('button', 'Confirm')
+        self.driver.get(f'{self.wallet_url}/popup.html')
+        self.node.find_and_click(By.XPATH,'//button[text()="Confirm"]')
+        # if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+        #     return False
+        # self.click_button_popup('button', 'Confirm')
         
         if not self.node.switch_tab('https://aicraft.fun/projects/fizen'):
             return False
@@ -131,24 +128,19 @@ class Aicraft:
         return True
 
     def _run_logic(self):
-        # lỗi khi nó chưa load
-        if not self.node.switch_tab('MetaMask Offscreen Page', 'title', None, 60):
-            self.node.snapshot(f'Chưa load được extension MetaMask')
-        self.wallet_url = "/".join(self.node.get_url().split('/')[:3])
-
         # unlock wallet
         if not self.unlock_wallet():
             self.node.snapshot(f'unlock_wallet Thất bại')
-
-        self.node.go_to('https://aicraft.fun/projects/fizen')
+        self.node.new_tab('https://aicraft.fun/projects/fizen')
         # connect wallet
         if self.node.find(By.XPATH, '//h2[text()="AICraft needs to connect to your wallet"]'):
             self.node.find_and_click(By.XPATH, '//button[text()="Sign"]')
-            if not self.node.switch_tab(f'{self.wallet_url}/notification.html'):
+            self.node.switch_tab(self.wallet_url)
+            self.driver.get(f'{self.wallet_url}/popup.html')
+            self.node.find_and_click(By.XPATH, '//button[text()="Confirm"]')
+        else:
+            if not self.connect_wallet():
                 self.node.snapshot(f'connect_wallet thất bại')
-            self.click_button_popup('button', 'Confirm')
-        # if not self.connect_wallet():
-        #     self.node.snapshot(f'connect_wallet thất bại')
 
         self.node.switch_tab('https://aicraft.fun/projects/fizen')
         while True:
