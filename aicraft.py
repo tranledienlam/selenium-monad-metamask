@@ -43,7 +43,7 @@ class Aicraft:
 
         unlock_actions = [
             (self.node.find_and_input, By.CSS_SELECTOR,
-             'input[id="password"]', self.password, None, 0.1),
+             'input[id="password"]', self.password, None, 0.1, None, 90),
             (self.node.find_and_click, By.CSS_SELECTOR,
              'button[data-testid="unlock-submit"]'),
         ]
@@ -110,7 +110,7 @@ class Aicraft:
     
     def vote(self):
         if not self.node.find_and_click(By.XPATH,
-             '(//div[div[div[div[h2[text()="Phở"]]]]])//div[2]//button[text()="Vote for me"]'):
+             '(//div[div[div[div[h2[text()="Phở"]]]]])//div[2]//button[text()="Vote for me"]', timeout=60):
             return False
         self.node.switch_tab(self.wallet_url)
         self.driver.get(f'{self.wallet_url}/popup.html')
