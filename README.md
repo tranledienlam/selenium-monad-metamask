@@ -1,4 +1,4 @@
-# AUTOMATION MONAD + METAMASK WALLET với Selenium Python
+# ~~AUTOMATION MONAD + METAMASK WALLET với Selenium Python~~ Chuyển sang source mới [Tại đây](https://github.com/tranledienlam/selenium-monad-aicraft-metamask)
 
 ## ⚠ Lưu ý quan trọng
 
